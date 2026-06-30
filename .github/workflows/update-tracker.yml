@@ -1,0 +1,37 @@
+name: Update Passenger MVP Tracker
+
+on:
+  schedule:
+    # 7:45 AM Argentina time (ART = UTC-3) → 10:45 UTC, lunes a viernes
+    - cron: '45 10 * * 1-5'
+  workflow_dispatch:
+    # También permite correrlo manualmente desde la UI de GitHub
+
+jobs:
+  update-tracker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate tracker HTML
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+        run: python3 generate_tracker.py
+
+      - name: Commit and push updated tracker
+        run: |
+          git config --global user.email "tracker-bot@pluralit.com"
+          git config --global user.name "Passenger Tracker Bot"
+          git add index.html
+          git diff --staged --quiet || git commit -m "🔄 Tracker actualizado $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
