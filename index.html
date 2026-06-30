@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Passenger MVP — Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:#111827;font-size:13px;padding:16px}
+.header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.title{font-size:17px;font-weight:700;color:#111827}
+.subtitle{font-size:12px;color:#6b7280;margin-top:2px}
+.updated-banner{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 14px;font-size:11px;color:#92400e;margin-bottom:14px}
+.health-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+.health-badge.warning{background:#fef3c7;color:#92400e;border-color:#fde68a}
+.health-badge.danger{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+.counters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.counter-card{background:#fff;border-radius:10px;padding:10px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06);min-width:100px}
+.counter-num{font-size:24px;font-weight:700;line-height:1}
+.counter-num.blue{color:#2563eb}.counter-num.orange{color:#d97706}.counter-num.green{color:#059669}.counter-num.red{color:#dc2626}
+.counter-label{font-size:10px;color:#9ca3af;font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.gantt-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;margin-bottom:12px}
+.gantt-scroll{overflow-x:auto}
+.gantt-grid{min-width:1180px}
+.gantt-row{display:flex;border-bottom:1px solid #f3f4f6}
+.gantt-row:last-child{border-bottom:none}
+.gantt-name{width:130px;min-width:130px;padding:0 12px;display:flex;flex-direction:column;justify-content:center;background:#fafafa;border-right:2px solid #e5e7eb;z-index:2;flex-shrink:0}
+.person-name{font-weight:700;font-size:12px;color:#111827}
+.person-role{font-size:10px;color:#9ca3af;margin-top:1px}
+.gantt-timeline{flex:1;position:relative;overflow:hidden}
+.day-col{flex-shrink:0;width:58px;border-right:1px solid #f3f4f6}
+.day-col.s135{background:#fafafa}.day-col.s136{background:#fff}.day-col.spost{background:#f0fdf4}
+.day-col.today-bg{background:#fffbeb;border-right:3px solid #f59e0b}
+.day-col.gap{width:24px;background:#fee2e2;border-right:2px solid #fca5a5}
+.day-header{flex-shrink:0;width:58px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:5px;position:relative;border-right:1px solid #f3f4f6}
+.day-header.today-col .day-num{color:#f59e0b}.day-header.today-col .day-date{color:#f59e0b}
+.day-num{font-size:13px;font-weight:700;color:#374151;line-height:1}
+.day-date{font-size:10px;color:#9ca3af;margin-top:1px}
+.gap-header{flex-shrink:0;width:24px;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:8px;color:#dc2626;font-weight:700;writing-mode:vertical-lr;border-right:2px solid #fca5a5}
+.sprint-bands{position:absolute;top:0;left:0;display:flex;height:18px}
+.sprint-band{display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff;letter-spacing:.04em;flex-shrink:0}
+.sprint-band.s135{background:#9ca3af}.sprint-band.s136{background:#6366f1}.sprint-band.spost{background:#059669}.sprint-band.gap{background:#fca5a5}
+.task-bar{position:absolute;height:26px;top:50%;transform:translateY(-50%);border-radius:6px;display:flex;align-items:center;padding:0 7px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:all;cursor:pointer;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);text-decoration:none}
+.task-bar:hover{filter:brightness(1.1)}
+.task-bar.past{opacity:.45}
+.jira-chip{display:inline-block;background:rgba(255,255,255,.25);padding:1px 5px;border-radius:4px;font-size:9px;margin-left:5px;flex-shrink:0}
+.today-marker{position:absolute;top:0;bottom:0;width:3px;pointer-events:none;z-index:10}
+.today-line{width:100%;height:100%;background:#f59e0b;opacity:.8}
+.today-label-top{position:absolute;top:0;left:50%;transform:translateX(-50%);background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:0 0 5px 5px;white-space:nowrap}
+.ms-item{position:absolute;top:3px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:1px;z-index:4}
+.ms-icon{font-size:13px;line-height:1}
+.ms-text{font-size:9px;font-weight:600;white-space:nowrap;color:#374151;background:#fff;padding:1px 4px;border-radius:3px;border:.5px solid #e5e7eb}
+.detail-card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:14px 16px;margin-bottom:12px;border-left:3px solid #e5e7eb;min-height:70px;display:flex;align-items:center}
+.detail-placeholder{font-size:12px;color:#9ca3af}
+.detail-content{width:100%}
+.detail-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+.detail-name{font-size:14px;font-weight:600;color:#111827}
+.detail-jira-link{display:inline-block;background:#ede9fe;color:#5b21b6;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none}
+.detail-meta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.detail-meta-item{font-size:11px;color:#6b7280}
+.detail-meta-item span{font-weight:500;color:#374151}
+.detail-desc{font-size:12px;color:#4b5563;line-height:1.5}
+.status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.s-done{background:#d1fae5;color:#065f46}.s-wip{background:#fef3c7;color:#d97706}.s-todo{background:#f3f4f6;color:#6b7280}.s-risk{background:#fee2e2;color:#dc2626}
+.kevin-section{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;margin-bottom:12px;border:1.5px dashed #d97706}
+.kevin-header{padding:10px 14px;background:#fffbeb;border-bottom:1px solid #fde68a;display:flex;align-items:flex-start;flex-direction:column;gap:2px}
+.kevin-title{font-size:13px;font-weight:600;color:#92400e;display:flex;align-items:center;gap:8px}
+.kevin-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:#fef3c7;color:#b45309;border:.5px solid #fde68a}
+.kevin-note{font-size:11px;color:#b45309}
+.jira-section{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.jira-section-header{padding:11px 14px;font-weight:600;font-size:12px;background:#f8f9ff;border-bottom:1px solid #e5e7eb;color:#3b45a8}
+.issue-table{width:100%;border-collapse:collapse}
+.issue-table th{text-align:left;padding:7px 14px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;font-weight:600;background:#fafafa;border-bottom:1px solid #f3f4f6}
+.issue-table td{padding:9px 14px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+.issue-table tr:last-child td{border-bottom:none}
+.issue-table tr.data-row:hover td{background:#fafafa;cursor:pointer}
+.jira-key{display:inline-block;background:#ede9fe;color:#5b21b6;padding:2px 7px;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap}
+.jira-key:hover{background:#ddd6fe}
+.updated-tag{font-size:11px;color:#9ca3af}
+.summary-text{font-size:12px;color:#374151}
+.person-chip{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:10px;color:#fff}
+.section-divider td{padding:6px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;border-bottom:1px solid #f3f4f6;border-top:1px solid #f3f4f6}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="title">🟠 Passenger MVP — Tracker de avance</div>
+    <div class="subtitle" id="subtitle">Día 7 de 18 · Sprint 136</div>
+  </div>
+  <div id="health-badge" class="health-badge">⏳ Calculando…</div>
+</div>
+
+<div class="updated-banner">
+  📅 Datos de Jira actualizados el <strong>30/06/2026 11:20 (hora Argentina)</strong> · El tracker se actualiza automáticamente a las 7:45 AM lunes a viernes
+</div>
+
+<div class="counters">
+  <div class="counter-card"><div class="counter-num blue">7</div><div class="counter-label">Día hoy</div></div>
+  <div class="counter-card"><div class="counter-num orange" id="cnt-left">—</div><div class="counter-label">Días restantes</div></div>
+  <div class="counter-card"><div class="counter-num green" id="cnt-done">—</div><div class="counter-label">Finalizados</div></div>
+  <div class="counter-card"><div class="counter-num red" id="cnt-stuck">—</div><div class="counter-label">Sin actividad +48hs</div></div>
+  <div class="counter-card"><div class="counter-num blue" id="cnt-total">—</div><div class="counter-label">Total en sprint</div></div>
+</div>
+
+<div class="gantt-wrap"><div class="gantt-scroll"><div class="gantt-grid" id="gantt-grid"></div></div></div>
+<div class="detail-card" id="detail-card" style="border-left-color:#e5e7eb"><div class="detail-placeholder">Pasá el mouse sobre una tarea para ver el detalle · Hacé clic para abrir en Jira</div></div>
+<div class="kevin-section">
+  <div class="kevin-header">
+    <div class="kevin-title">⚙️ Kevin — Trabajo paralelo al MVP <span class="kevin-badge">1hs/día · no forma parte de la entrega Jul 17</span></div>
+    <div class="kevin-note">Construye la arquitectura del Fable Data Lake AWS para integración post-20 de julio.</div>
+  </div>
+  <div class="gantt-scroll"><div class="gantt-grid" id="kevin-grid"></div></div>
+</div>
+<div class="jira-section">
+  <div class="jira-section-header">📋 Ítems del sprint activo (P224)</div>
+  <div id="jira-content"></div>
+</div>
+
+<script>
+// ─── DATA (injected by generate_tracker.py) ──────────
+const ISSUES = [];
+const TODAY_N = 7;
+
+// ─── CONSTANTS ───────────────────────────────────────
+const DAY_W = 58, GAP_W = 24;
+const DAYS = [
+  {n:1,date:'2026-06-22',label:'22/6',sprint:'s135'},
+  {n:2,date:'2026-06-23',label:'23/6',sprint:'s135'},
+  {n:3,date:'2026-06-24',label:'24/6',sprint:'s135'},
+  {n:4,date:'2026-06-25',label:'25/6',sprint:'s135'},
+  {n:5,date:'2026-06-26',label:'26/6',sprint:'s135'},
+  {n:6,date:'2026-06-29',label:'29/6',sprint:'s136'},
+  {n:7,date:'2026-06-30',label:'30/6',sprint:'s136',today:true},
+  {n:8,date:'2026-07-01',label:'1/7',sprint:'s136'},
+  {n:9,date:'2026-07-02',label:'2/7',sprint:'s136'},
+  {n:10,date:'2026-07-03',label:'3/7',sprint:'s136'},
+  {n:11,date:'2026-07-06',label:'6/7',sprint:'s136'},
+  {n:12,date:'2026-07-07',label:'7/7',sprint:'s136'},
+  {n:13,date:'2026-07-08',label:'8/7',sprint:'s136'},
+  {n:14,date:'2026-07-13',label:'13/7',sprint:'spost'},
+  {n:15,date:'2026-07-14',label:'14/7',sprint:'spost'},
+  {n:16,date:'2026-07-15',label:'15/7',sprint:'spost'},
+  {n:17,date:'2026-07-16',label:'16/7',sprint:'spost'},
+  {n:18,date:'2026-07-17',label:'17/7',sprint:'spost'},
+];
+const MS = {9:{icon:'🎯',text:'Demo Hamza'},12:{icon:'👀',text:'Preview dev'},14:{icon:'🏗️',text:'Build listo'},18:{icon:'🏁',text:'Deadline'}};
+const PEOPLE = [
+  {name:'Rodrigo',role:'Backend + IA',color:'#7c3aed',tasks:[
+    {name:'Capa conversacional + Chat Agent',detail:'Backend de IA para el agente de chat. Construye la capa conversacional y el motor de respuestas del panel lateral.',start:1,end:5,kw:['conversacional','chat agent','10112','10028','10083']},
+    {name:'Backend: POI + Demographics',detail:'Endpoints para los dos datasets del MVP. Alineación con MCP y contratos de DataSource. QA con Tatiana incluido.',start:6,end:9,kw:['poi','demographics','habilitación']},
+    {name:'Backend: Composition Layer',detail:'Motor de composición de audiencia única. Multi-Domain Blend. Produce el CSV/JSON final con índice por celda.',start:10,end:14,kw:['composition','multi-domain','audience composition']},
+  ]},
+  {name:'Gastón',role:'Proxy + Frontend',color:'#0284c7',tasks:[
+    {name:'Backend: Capa del proxy',detail:'Capa proxy con versión ya publicada en dev. Middleware entre el agente y los servicios de data.',start:1,end:7,kw:['proxy','capa del proxy']},
+    {name:'Frontend: Audience Studio',detail:'UI principal: mapa protagonista + chat lateral. Layout customizable, full-size map. Eventos de estado del agente en tiempo real.',start:7,end:14,kw:['audience studio','frontend','mapa']},
+  ]},
+  {name:'Tatiana',role:'QA',color:'#059669',tasks:[
+    {name:'Estrategia de pruebas — capa conversacional',detail:'Estrategia QA para la capa conversacional + validación de endpoints POI/Demographics de Rodrigo. Syncs con Fasco.',start:1,end:14,kw:['estrategia','pruebas','qa','tatiana']},
+    {name:'QA: integración final',detail:'Testing de integración completa del MVP. Gate de aceptación final antes del 17/7.',start:15,end:18,kw:['integración','integration']},
+  ]},
+];
+const KEVIN = {name:'Kevin',role:'1hs/día · infra',color:'#b45309',tasks:[
+  {name:'Fable Data Lake AWS (Part 3/3)',detail:'Arquitectura del data lake en AWS para el motor transaccional. Disponible para integración post-20 de julio. Sync con Rodrigo para contexto del MVP.',start:1,end:18,kw:['fable','data lake','aws','3/3']}
+]};
+
+function dayX(n){return(n-1)*DAY_W+(n>13?GAP_W:0)}
+function getStatusCls(i){
+  const cat=i.statusCat||'',name=i.status||'';
+  if(cat==='Done'||name==='Finalizado'||name==='Listo'||name==='Done')return 's-done';
+  if(name==='En curso'||cat==='In Progress')return 's-wip';
+  return 's-todo';
+}
+function isStuck(i){
+  if(getStatusCls(i)!=='s-wip')return false;
+  return(Date.now()-new Date(i.updated))/3600000>48;
+}
+function statusText(i){
+  if(isStuck(i))return '⚠️ En curso (parado)';
+  const c=getStatusCls(i);
+  if(c==='s-done')return '✅ Finalizado';
+  if(c==='s-wip')return '🔄 En curso';
+  return '⬜ Sin iniciar';
+}
+function relTime(d){
+  if(!d)return '—';
+  const h=(Date.now()-new Date(d))/3600000;
+  if(h<1)return 'hace minutos';if(h<24)return `hace ${Math.round(h)}h`;
+  if(h<48)return 'ayer';return `hace ${Math.round(h/24)}d`;
+}
+function matchIssue(task){
+  return ISSUES.find(i=>task.kw&&task.kw.some(kw=>i.summary.toLowerCase().includes(kw.toLowerCase())));
+}
+
+function makeCols(h){
+  const s=document.createElement('div');
+  s.style.cssText=`position:absolute;top:0;left:0;height:${h}px;display:flex;`;
+  DAYS.forEach(d=>{
+    const c=document.createElement('div');
+    const isToday=d.n===TODAY_N;
+    c.className='day-col '+(isToday?'today-bg':d.sprint);
+    c.style.cssText=`flex-shrink:0;width:${DAY_W}px;height:${h}px;`;
+    s.appendChild(c);
+    if(d.n===13){const g=document.createElement('div');g.style.cssText=`flex-shrink:0;width:${GAP_W}px;height:${h}px;background:#fee2e2;border-right:2px solid #fca5a5;`;s.appendChild(g);}
+  });
+  return s;
+}
+function makeTodayLine(h,showLabel){
+  const cx=dayX(TODAY_N)+DAY_W/2;
+  const m=document.createElement('div');
+  m.className='today-marker';
+  m.style.cssText=`position:absolute;left:${cx-1}px;top:0;width:3px;height:${h}px;pointer-events:none;z-index:10;`;
+  if(showLabel){const l=document.createElement('div');l.className='today-label-top';l.textContent='📍 HOY';m.appendChild(l);}
+  const line=document.createElement('div');line.className='today-line';line.style.height=h+'px';
+  m.appendChild(line);return m;
+}
+function makeSprintBands(){
+  const b=document.createElement('div');b.className='sprint-bands';
+  [{l:'Sprint 135',w:5*DAY_W,c:'s135'},{l:'Sprint 136 — Build del MVP',w:8*DAY_W,c:'s136'},{l:'',w:GAP_W,c:'gap'},{l:'Post-sprint · QA',w:5*DAY_W,c:'spost'}].forEach(def=>{
+    const el=document.createElement('div');el.className='sprint-band '+def.c;el.style.cssText=`flex-shrink:0;width:${def.w}px;height:18px;`;el.textContent=def.l;b.appendChild(el);
+  });return b;
+}
+
+function buildGantt(containerId,people,showMs){
+  const grid=document.getElementById(containerId);grid.innerHTML='';
+  // header
+  const hRow=document.createElement('div');hRow.className='gantt-row';hRow.style.borderBottom='2px solid #e5e7eb';
+  const hName=document.createElement('div');hName.className='gantt-name';hName.style.height='68px';
+  hName.innerHTML='<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em">Workstream</div>';
+  const hTl=document.createElement('div');hTl.className='gantt-timeline';hTl.style.cssText='height:68px;position:relative;';
+  hTl.appendChild(makeCols(68));hTl.appendChild(makeSprintBands());
+  const dRow=document.createElement('div');dRow.style.cssText='position:absolute;top:18px;left:0;display:flex;height:50px;';
+  DAYS.forEach(d=>{
+    const dh=document.createElement('div');dh.className='day-header'+(d.n===TODAY_N?' today-col':'');dh.style.cssText=`flex-shrink:0;width:${DAY_W}px;`;
+    if(MS[d.n]){const pip=document.createElement('div');pip.style.cssText='position:absolute;top:3px;font-size:12px;line-height:1;';pip.textContent=MS[d.n].icon;dh.appendChild(pip);}
+    dh.innerHTML+=`<div class="day-num">D${d.n}</div><div class="day-date">${d.label}</div>`;
+    dRow.appendChild(dh);
+    if(d.n===13){const gh=document.createElement('div');gh.className='gap-header';gh.style.cssText=`flex-shrink:0;width:${GAP_W}px;`;gh.textContent='9-10 Jul';dRow.appendChild(gh);}
+  });
+  hTl.appendChild(dRow);hTl.appendChild(makeTodayLine(68,false));
+  hRow.appendChild(hName);hRow.appendChild(hTl);grid.appendChild(hRow);
+
+  // person rows
+  people.forEach(person=>{
+    const row=document.createElement('div');row.className='gantt-row';row.style.height='58px';
+    const nc=document.createElement('div');nc.className='gantt-name';nc.style.height='58px';
+    nc.innerHTML=`<div class="person-name" style="color:${person.color}">${person.name}</div><div class="person-role">${person.role}</div>`;
+    const tl=document.createElement('div');tl.className='gantt-timeline';tl.style.cssText='height:58px;position:relative;';
+    tl.appendChild(makeCols(58));tl.appendChild(makeTodayLine(58,false));
+    person.tasks.forEach(task=>{
+      const x=dayX(task.start),w=dayX(task.end)+DAY_W-x;
+      const isPast=task.end<TODAY_N;
+      const mi=matchIssue(task);
+      let bg=person.color;
+      if(mi&&isStuck(mi))bg='#dc2626';
+      const bar=document.createElement('a');
+      bar.className='task-bar'+(isPast?' past':'');
+      bar.style.cssText=`left:${x+2}px;width:${w-4}px;background:${bg};`;
+      bar.href=mi?`https://grupokinetic.atlassian.net/browse/${mi.key}`:'#';
+      bar.target=mi?'_blank':'_self';
+      if(!mi)bar.onclick=e=>e.preventDefault();
+      if(w>70){
+        const sp=document.createElement('span');sp.textContent=task.name;
+        sp.style.cssText='overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
+        bar.appendChild(sp);
+        if(mi){const chip=document.createElement('span');chip.className='jira-chip';chip.textContent=mi.key.replace('P224-','#');bar.appendChild(chip);}
+      }
+      bar.addEventListener('mouseenter',()=>showDetail(task,person,mi));
+      bar.addEventListener('mouseleave',clearDetail);
+      tl.appendChild(bar);
+    });
+    row.appendChild(nc);row.appendChild(tl);grid.appendChild(row);
+  });
+
+  // milestones
+  if(showMs){
+    const msRow=document.createElement('div');msRow.className='gantt-row';msRow.style.cssText='height:38px;border-bottom:none;';
+    const msN=document.createElement('div');msN.className='gantt-name';msN.style.cssText='height:38px;font-size:10px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.05em;';msN.textContent='Hitos';
+    const msTl=document.createElement('div');msTl.className='gantt-timeline';msTl.style.cssText='height:38px;position:relative;';
+    msTl.appendChild(makeCols(38));msTl.appendChild(makeTodayLine(38,true));
+    Object.entries(MS).forEach(([n,ms])=>{
+      const cx=dayX(parseInt(n))+DAY_W/2;
+      const item=document.createElement('div');item.className='ms-item';item.style.left=cx+'px';
+      item.innerHTML=`<div class="ms-icon">${ms.icon}</div><div class="ms-text">${ms.text}</div>`;
+      msTl.appendChild(item);
+    });
+    msRow.appendChild(msN);msRow.appendChild(msTl);grid.appendChild(msRow);
+  }
+}
+
+function showDetail(task,person,issue){
+  const card=document.getElementById('detail-card');
+  card.style.borderLeftColor=person.color;
+  const sl=issue?statusText(issue):'';
+  const jiraLink=issue?`<a href="https://grupokinetic.atlassian.net/browse/${issue.key}" target="_blank" class="detail-jira-link">${issue.key}</a>`:'';
+  const sc=issue?getStatusCls(issue)+(isStuck(issue)?'_risk':''):'';
+  const assignee=issue?(issue.assignee||'Sin asignar').split(' ')[0]:person.name;
+  card.innerHTML=`<div class="detail-content">
+    <div class="detail-top"><div class="detail-name">${task.name}</div><div style="display:flex;align-items:center;gap:8px;">${jiraLink}${issue?`<span class="status-pill ${isStuck(issue)?'s-risk':getStatusCls(issue)}">${sl}</span>`:''}</div></div>
+    <div class="detail-meta"><div class="detail-meta-item">👤 <span>${assignee}</span></div>${issue?`<div class="detail-meta-item">⏱️ <span>${relTime(issue.updated)}</span></div>`:''}</div>
+    <div class="detail-desc">${task.detail}</div>
+  </div>`;
+}
+function clearDetail(){
+  const card=document.getElementById('detail-card');
+  card.style.borderLeftColor='#e5e7eb';
+  card.innerHTML='<div class="detail-placeholder">Pasá el mouse sobre una tarea para ver el detalle · Hacé clic para abrir en Jira</div>';
+}
+
+// INIT
+buildGantt('gantt-grid',PEOPLE,true);
+buildGantt('kevin-grid',[KEVIN],false);
+
+// counters + health
+const done=ISSUES.filter(i=>getStatusCls(i)==='s-done').length;
+const stuck=ISSUES.filter(i=>isStuck(i)).length;
+document.getElementById('cnt-left').textContent=18-TODAY_N;
+document.getElementById('cnt-done').textContent=done;
+document.getElementById('cnt-stuck').textContent=stuck;
+document.getElementById('cnt-total').textContent=ISSUES.length;
+const badge=document.getElementById('health-badge');
+if(stuck>=2){badge.className='health-badge danger';badge.textContent=`🔴 ${stuck} ítems parados`;}
+else if(stuck===1){badge.className='health-badge warning';badge.textContent='⚠️ 1 ítem sin actividad';}
+else{badge.className='health-badge';badge.textContent='✅ En track';}
+
+// jira table
+let html='<table class="issue-table"><thead><tr><th>Key</th><th>Tarea</th><th>Persona</th><th>Estado</th><th>Últ. actividad</th></tr></thead><tbody>';
+const allPeople=[...PEOPLE,KEVIN];
+const groups={};const unmapped=[];
+ISSUES.forEach(i=>{
+  const an=(i.assignee||'').toLowerCase();let matched=false;
+  for(const p of allPeople){if(an.includes(p.name.toLowerCase())){if(!groups[p.name])groups[p.name]={p,items:[]};groups[p.name].items.push(i);matched=true;break;}}
+  if(!matched)unmapped.push(i);
+});
+[...PEOPLE.map(p=>p.name),KEVIN.name].forEach(pn=>{
+  const g=groups[pn];if(!g)return;
+  html+=`<tr class="section-divider"><td colspan="5">${pn}${pn==='Kevin'?' — Trabajo paralelo':''}</td></tr>`;
+  g.items.forEach(i=>{
+    const sc=isStuck(i)?'s-risk':getStatusCls(i);
+    html+=`<tr class="data-row" onclick="window.open('https://grupokinetic.atlassian.net/browse/${i.key}','_blank')">
+      <td><a href="https://grupokinetic.atlassian.net/browse/${i.key}" target="_blank" class="jira-key" onclick="event.stopPropagation()">${i.key}</a></td>
+      <td class="summary-text">${i.summary.replace(/^\[?Spike\]?\s*:?\s*/i,'').replace(/^Parte \d+ de \d+ -\s*/,'')}</td>
+      <td><span class="person-chip" style="background:${g.p.color}">${pn}</span></td>
+      <td><span class="status-pill ${sc}">${statusText(i)}</span></td>
+      <td class="updated-tag">${relTime(i.updated)}</td>
+    </tr>`;
+  });
+});
+if(unmapped.length){
+  html+=`<tr class="section-divider"><td colspan="5">Sin asignar / no mapeados</td></tr>`;
+  unmapped.forEach(i=>{
+    html+=`<tr class="data-row" onclick="window.open('https://grupokinetic.atlassian.net/browse/${i.key}','_blank')">
+      <td><a href="https://grupokinetic.atlassian.net/browse/${i.key}" target="_blank" class="jira-key" onclick="event.stopPropagation()">${i.key}</a></td>
+      <td class="summary-text">${i.summary}</td><td></td>
+      <td><span class="status-pill ${getStatusCls(i)}">${statusText(i)}</span></td>
+      <td class="updated-tag">${relTime(i.updated)}</td>
+    </tr>`;
+  });
+}
+html+='</tbody></table>';
+document.getElementById('jira-content').innerHTML=html;
+</script>
+</body>
+</html>
